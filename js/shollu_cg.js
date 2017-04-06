@@ -222,6 +222,10 @@
 			
 			/* Menu not selected */
 			if (id_new === undefined) { 
+				if (id_old !== '') {
+					// console.log('1.5'); 
+					return hide(); 
+				}
 				// console.log('1'); 
 				$element
 					.attr('value', '')
