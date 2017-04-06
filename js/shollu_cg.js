@@ -24,23 +24,28 @@
 			
   var Shollu_CG = function ( elem, options ) {
 		/* Private variables */
+		var o = options;
+				o.guid	= newGuid();
+
 		var 
-		o = options,
 		$element     = $(elem),
 		$container   = template(),
 		$target      = $container.find('input[type=hidden]'),
 		$button      = $container.find('span.shollu_cg.dropdown-toggle'),
 		$menu  		   = template_result(),
 		focused      = false,
-		mousedover   = false,
 		suppressKeyPressRepeat = {},
 		loading			= false,
 		rowData			= {},
 		tot_page		 	= 1;
 		
+		o.escape = false;
+		o.tabenter = false;
+
 		//Expose public methods
 		this.name 		= PLUGIN_NAME;
-		this.version 	= PLUGIN_VERSION;
+		this.version 	= PLUGIN_VERSION + ' ('+o.guid+')';
+		this.guid 		= o.guid;
 		this.o				= o;
 		this.destroy 	= function(){ destroy(); };
 		this.getValue = function(field){ return getValue(field); };
@@ -50,6 +55,13 @@
 		
 		init();
 		
+		function newGuid(){
+			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+				var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+				return v.toString(16);
+			});
+    };
+
 		function template(){
 			if (o.style == 'bs3')
 				return $('<div class="shollu_cg-container">'+
@@ -148,8 +160,8 @@
 			focused = false;
 			if (o.escape) {return;}
 			select();
-			if (!o.selected) {select();}
-			if (!mousedover && o.shown) {setTimeout(function () { hide(); o.page = 1; }, 200);}
+			// if (!o.selected) {select();}
+			if (!o.mousedover && o.shown) {setTimeout(function () { hide(); o.page = 1; }, 200);}
 		}
 		
 		function toggle(){
@@ -202,27 +214,66 @@
 	
 		function select() {
 			// console.log('debug: select up');
-			var id = $element.attr('data-'+o.idField);
-			var name = $element.attr('data-'+o.textField);
+			var id_old = $element.attr('data-'+o.idField);
+			var id_new = $menu.find('.active').data(o.idField);
+			var name_old = $element.attr('data-'+o.textField);
+			var name_new = $menu.find('.active').data(o.textField);
 			var text = $element.val();
 			
-			if (text != name){ 
+			/* Menu not selected */
+			if (id_new === undefined) { 
+				// console.log('1'); 
 				$element
 					.attr('value', '')
 					.attr('data-'+o.idField, '')
 					.attr('data-'+o.textField, '')
 					.val('').trigger('change');
-				$target.val('').trigger('change');
-				o.onSelect.call(this, {});
+				return hide(); 
 			}
-
-			var id_old = $element.attr('value'),
-					id_new = $menu.find('.active').data(o.idField),
-					name_new = $menu.find('.active').data(o.textField);
-			
-			if (id_new === undefined) { return hide(); }
-			
-			if (id_new !== id_old) {
+			/* Menu selected but same with current (Nothing changed) */
+			if (id_new == id_old) {	
+				// console.log('2'); 
+				return hide(); 
+			}
+			/* Menu selected, escape pressed and current is empty */
+			if ((id_new != id_old) && o.escape) {	
+				// console.log('3');
+				$element
+					.attr('value', '')
+					.attr('data-'+o.idField, '')
+					.attr('data-'+o.textField, '')
+					.val('').trigger('change');
+				$menu.find('.active').removeClass('active');
+				o.escape = false; 
+				return hide(); 
+			}
+			/* Menu selected but mouse not focus */
+			if ((id_new != id_old) && !o.mousedover) {
+				/* Menu selected, mouse not focus but tab/enter pressed */
+				if (o.tabenter){
+					// console.log('4.1');
+					$element
+						.attr('value', id_new)
+						.attr('data-'+o.idField, id_new)
+						.attr('data-'+o.textField, name_new)
+						.val(name_new).trigger('change');
+					$target.val(id_new).trigger('change');
+					o.onSelect.call(this, o.rowData[id_new]);					
+					o.tabenter = false;
+					return hide(); 
+				}
+				// console.log('4');
+				$element
+					.attr('value', '')
+					.attr('data-'+o.idField, '')
+					.attr('data-'+o.textField, '')
+					.val('').trigger('change');
+				$menu.find('.active').removeClass('active');
+				return hide(); 
+			}
+			/* Menu selected by keyboard or mouse */
+			if (id_new != id_old) {
+				// console.log('5');
 				$element
 					.attr('value', id_new)
 					.attr('data-'+o.idField, id_new)
@@ -230,9 +281,8 @@
 					.val(name_new).trigger('change');
 				$target.val(id_new).trigger('change');
 				o.onSelect.call(this, o.rowData[id_new]);
+				return hide();
 			}
-			o.selected = true;
-			return hide();
 		}
 
 		/* format data = {total:999, rows:{field1:value1, field2:value2}} */
@@ -240,7 +290,7 @@
 			var list = [];
 			var rows = data;
 			var id = $element.attr('data-'+o.idField);
-			var text = $element.val().toLowerCase();
+			var text = $element.val();
 			
 			if (o.page == 1)
 				$menu.empty();
@@ -273,7 +323,9 @@
 						var active = 'active ';
 						cls = cls ? cls+active : 'class="'+active+'"';
 					}
-					list.push( $('<li '+cls+'data-'+o.idField+'="'+v+'" data-'+o.textField+'="'+t+'"><a>'+t.replace(text, "<b>"+text+"</b>")+'</a></li>') );
+					text = text.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+					var re = new RegExp("(" + text.split(' ').join('|') + ")", "gi");
+					list.push( $('<li '+cls+'data-'+o.idField+'="'+v+'" data-'+o.textField+'="'+t+'"><a>'+t.replace(re, "<b>$1</b>")+'</a></li>') );
 					rowData[v] = rows[i]; /* 1:{value:1, text:"One"}, 2:{value:2, text:"Two"} */
 				});
 				$menu.append(list);
@@ -467,13 +519,15 @@
 				case 9: // tab
 				case 13: // enter
 					if (!o.shown) {return;}
+					o.tabenter = true;
 					select();
 					break;
 
 				case 27: // escape
 					if (!o.shown) {return;}
 					o.escape = true;
-					hide();
+					// hide();
+					select();
 					break;
 
 				default:
@@ -510,12 +564,12 @@
 						select();
 					})
 					.on('mouseenter', 'li', function(e){
-						mousedover = true;
+						o.mousedover = true;
 						$menu.find('.active').removeClass('active');
 						$(e.currentTarget).addClass('active');
 					})
 					.on('mouseleave', function(){ 
-						mousedover = false; 
+						o.mousedover = false; 
 					})
 					.scroll( scroll );
 
