@@ -234,6 +234,12 @@
 					.val('').trigger('change');
 				return hide(); 
 			}
+			/* Menu selected but not same with current and mouse klik outside */
+			if ((id_new != '') && (id_old != '') && !o.mousedover) {
+				// console.log('1.75'); 
+				$menu.find('.active').removeClass('active');
+				return hide(); 
+			}
 			/* Menu selected but same with current (Nothing changed) */
 			if (id_new == id_old) {	
 				// console.log('2'); 
@@ -319,28 +325,27 @@
 					var t = rows[i][o.textField];
 					var cls = (o.item_cls) ? 'class="'+o.item_cls+'" ' : '';
 
-					if (id && (id == v)){
-						var active = 'active ';
-						cls = cls ? cls+active : 'class="'+active+'"';
-					}
-					if (text && (text == t.toLowerCase())){
-						var active = 'active ';
-						cls = cls ? cls+active : 'class="'+active+'"';
-					}
 					text = text.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
 					var re = new RegExp("(" + text.split(' ').join('|') + ")", "gi");
-					list.push( $('<li '+cls+'data-'+o.idField+'="'+v+'" data-'+o.textField+'="'+t+'"><a>'+t.replace(re, "<b>$1</b>")+'</a></li>') );
+					var li = $('<li data-'+o.idField+'="'+v+'" data-'+o.textField+'="'+t+'"><a>'+t.replace(re, "<b>$1</b>")+'</a></li>');
+					if (o.item_cls) li.addClass(o.item_cls);
+					if (id && (id == v)) li.addClass('active');
+					if (text && (text == t.toLowerCase())) { 
+						if (! li.hasClass('active')) 
+							li.addClass('active'); 
+					}
+					list.push( li );
 					rowData[v] = rows[i]; /* 1:{value:1, text:"One"}, 2:{value:2, text:"Two"} */
 				});
 				$menu.append(list);
 			} else {
 				$menu.append('<span style="color:#999;">'+o.emptyMessage+'</span>');
 			}
-			
 			/* insert to object o, for permanent storage & can be accessed on other function */
 			o.rowData = rowData;
 			show();
 			$element.focus();
+			fixMenuScroll();
 		}
 		
 		function fixMenuScroll(){
