@@ -318,19 +318,14 @@
 			if (o.page == 1)
 				$menu.empty();
 			
-			// console.log('addition:'+Object.keys(o.addition).length);
-			if (Object.keys(o.addition).length > 0){
-				var v = o.addition[o.idField];
-				var t = o.addition[o.textField];
-				var cls = (o.item_cls) ? 'class="'+o.item_cls+'" ' : '';
-				list.push($('<li '+cls+'data-'+o.idField+'="'+v+'" data-'+o.textField+'="'+t+'"><a>'+t+'</a></li>'));
-				rowData[v] = o.addition;
-			}
-			
 			if (o.remote) {
 				rows = data.rows;
 				tot_page = Math.ceil(data.total/o.rows);
 			} 
+			
+			if (Object.keys(o.addition).length > 0){
+				rows.unshift(o.addition);
+			}
 			
 			if (Object.keys(rows).length > 0) {
 				$.each(rows, function(i) {
