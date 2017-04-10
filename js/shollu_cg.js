@@ -242,6 +242,19 @@
 			}
 			/* Menu selected but same with current (Nothing changed) */
 			if (id_new == id_old) {	
+				if (Object.keys(o.addition).length > 0){
+					// console.log('2.1'); 
+					if (id_new == 0){
+						// console.log('2.2'); 
+						$element
+							.attr('value', id_new)
+							.attr('data-'+o.idField, id_new)
+							.attr('data-'+o.textField, name_new)
+							.val(name_new).trigger('change');
+						$target.val(id_new).trigger('change');
+						o.onSelect.call(this, o.rowData[id_new]);	
+					}
+				}
 				// console.log('2'); 
 				return hide(); 
 			}
